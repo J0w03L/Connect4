@@ -1,6 +1,7 @@
 using System;
 
 using Connect4Config;
+using Connect4AI;
 
 namespace Connect4Game
 {
@@ -49,15 +50,31 @@ namespace Connect4Game
 
         // What X position has the user currently got selected?
         static int selectedX = 1;
+
+        // What team is the player on?
         public static Team playerTeam = Team.YELLOW;
+
+        // Is the player going first?
+        static bool playerFirst = true;
+
+        // Has the first move been played?
+        static bool playedFirstMove = false;
 
         public static void Play()
         {
             ClearGrid();
 
+            // Move selection to center slot.
+            selectedX = (int)Math.Ceiling((double)(Game.WIDTH / 2)) + 1;
+
+            // Alternate first player.
+            playerFirst = !playerFirst;
+            playedFirstMove = false;
+
             while (true)
             {
-                PrintGrid();
+                // If the AI needs to make a move, don't print the grid here to lessen flashing.
+                if (playedFirstMove || playerFirst) PrintGrid();
 
                 Console.Write('\n');
                 Console.WriteLine("SPACE : Play Counter");
@@ -65,7 +82,14 @@ namespace Connect4Game
                 Console.WriteLine("LEFT  : Move Counter Left");
                 Console.WriteLine("RIGHT : Move Counter Right");
 
-                ConsoleKey key = Console.ReadKey().Key;
+                // If we're not going first, and the first move hasn't been played yet, just pretend we gave input
+                // so the AI can move.
+                ConsoleKey key;
+                if (!playedFirstMove && !playerFirst)
+                    key = ConsoleKey.Spacebar;
+                else
+                    key = Console.ReadKey().Key;
+
                 switch (key)
                 {
                     case ConsoleKey.Spacebar:
@@ -74,20 +98,44 @@ namespace Connect4Game
                         if (key == ConsoleKey.B && !Config.DEBUG) break;
 
                         int nextY = GetNextYForX(selectedX);
-                        if (nextY == 0) break;
 
-                        // Set wherever the player just selected to their team, or to opponent team if they
-                        // played the opponent's turn instead.
-                        grid[selectedX, nextY] = playerTeam == (key != ConsoleKey.B ? Team.RED : Team.YELLOW)
-                                                               ? SlotState.RED : SlotState.YELLOW;
-
-                        // Check to see if placing this counter created any winning lines.
-                        if (CheckForLines(selectedX, nextY))
+                        if (playedFirstMove || playerFirst)
                         {
-                            Console.WriteLine("You won!");
-                            return;
+                            if (nextY == 0) break;
+
+                            // Set wherever the player just selected to their team, or to opponent team if they
+                            // played the opponent's turn instead.
+                            grid[selectedX, nextY] = playerTeam == (key != ConsoleKey.B ? Team.RED : Team.YELLOW)
+                                                                   ? SlotState.RED : SlotState.YELLOW;
+
+                            PrintGrid();
+
+                            // Check to see if placing this counter created any winning lines.
+                            if (CheckForLines(selectedX, nextY))
+                            {
+                                Console.WriteLine("You won!");
+                                return;
+                            }
                         }
 
+                        // Let the AI make a move.
+                        if (!(key == ConsoleKey.B && Config.DEBUG))
+                        {
+                            int aiX, aiY;
+                            Team aiTeam = playerTeam == Team.RED ? Team.YELLOW : Team.RED;
+
+                            OpponentAI.PlayCounter(aiTeam, selectedX, nextY, out aiX, out aiY);
+
+                            PrintGrid();
+
+                            if (CheckForLines(aiX, aiY))
+                            {
+                                Console.WriteLine("You lost!");
+                                return;
+                            }
+                        }
+
+                        if (!playedFirstMove) playedFirstMove = true;
                         break;
                     case ConsoleKey.LeftArrow:
                         if (selectedX != 1) selectedX--;
@@ -108,7 +156,7 @@ namespace Connect4Game
                 for (int x = 0; x < WIDTH + 2; x++)
                 {
                     grid[x, y] = (x == 0 || x == WIDTH + 1 || y == 0 || y == HEIGHT + 1) ? SlotState.BLOCK : SlotState.EMPTY;
-                    if (Config.DEBUG) Console.Write($"{(byte)grid[x, y]}{(x == WIDTH + 1 ? '\n' : ' ')}");
+                    if (Config.DEBUG) Console.Write($"{grid[x, y]}{(x == WIDTH + 1 ? '\n' : ' ')}");
                 }
             }
         }
@@ -162,7 +210,7 @@ namespace Connect4Game
             Console.WriteLine(GetNextYForX(6));
         }
 
-        static int GetNextYForX(int x)
+        public static int GetNextYForX(int x)
         {
             int y = HEIGHT + 1;
 
@@ -173,6 +221,23 @@ namespace Connect4Game
             }
 
             return y;
+        }
+
+        public static int[][] GetDirectionVectors(Direction dir, int x, int y)
+        {
+            switch (dir)
+            {
+                case Direction.VERTICAL:
+                    return new int[][] { new int[] { x - 1, y }, new int[] { x + 1, y } };
+                case Direction.HORIZONTAL:
+                    return new int[][] { new int[] { x, y - 1 }, new int[] { x, y + 1 } };
+                case Direction.DIAGONAL_1:
+                    return new int[][] { new int[] { x - 1, y - 1 }, new int[] { x + 1, y + 1 } };
+                case Direction.DIAGONAL_2:
+                    return new int[][] { new int[] { x - 1, y + 1 }, new int[] { x + 1, y - 1 } };
+                default:
+                    throw new Exception("Unknown DIRECTION!");
+            }
         }
 
         static bool CheckForLines(int x, int y)
@@ -194,28 +259,11 @@ namespace Connect4Game
             return false;
         }
 
-        static void FindAdjacentCounters(Direction dir, Team team, int checkDirIndex, ref int counted, int x, int y)
+        public static void FindAdjacentCounters(Direction dir, Team team, int checkDirIndex, ref int counted, int x, int y)
         {
-            int[][] dirs;
+            if (grid[x, y] == SlotState.BLOCK) return;
 
-            switch (dir)
-            {
-                case Direction.VERTICAL:
-                    dirs = new int[][] { new int[] { x - 1, y }, new int[] { x + 1, y } };
-                    break;
-                case Direction.HORIZONTAL:
-                    dirs = new int[][] { new int[] { x, y - 1 }, new int[] { x, y + 1 } };
-                    break;
-                case Direction.DIAGONAL_1:
-                    dirs = new int[][] { new int[] { x - 1, y - 1 }, new int[] { x + 1, y + 1 } };
-                    break;
-                case Direction.DIAGONAL_2:
-                    dirs = new int[][] { new int[] { x - 1, y + 1 }, new int[] { x + 1, y - 1 } };
-                    break;
-                default:
-                    throw new Exception("Unknown DIRECTION!");
-                    break;
-            }
+            int[][] dirs = GetDirectionVectors(dir, x, y);
 
             int nextX, nextY;
 

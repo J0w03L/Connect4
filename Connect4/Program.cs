@@ -7,8 +7,7 @@ namespace Connect4Config
 {
     class Config
     {
-        public const bool DEBUG = true;
-        //public const bool DEBUG = false;
+        public const bool DEBUG = !true;
     }
 }
 
