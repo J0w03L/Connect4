@@ -63,6 +63,10 @@ namespace Connect4Game
 
         public static void Play()
         {
+            // Clear console at the start of a new game.
+            Console.Clear();
+
+            // Reset the grid.
             ClearGrid();
 
             // Move selection to center slot.
@@ -74,24 +78,20 @@ namespace Connect4Game
 
             while (true)
             {
-                // If the AI needs to make a move, don't print the grid here to lessen flashing.
-                if (playedMoves != 0 || playerFirst) PrintGrid();
-
-                Console.Write('\n');
-                Console.WriteLine("SPACE : Play Counter");
-                if (Config.DEBUG) Console.WriteLine("B     : Play Opponent Counter (DEBUG)");
-                Console.WriteLine("LEFT  : Move Counter Left");
-                Console.WriteLine("RIGHT : Move Counter Right");
+                PrintGrid();
 
                 // If we're not going first, and the first move hasn't been played yet, just pretend we gave input
                 // so the AI can move.
                 // If we've filled up the grid, we also do this, but instead it's so that we can tell the user they've
                 // drawn.
+                //
+                // We have to use "intercept: true" because Windows acts weirdly if you press the escape key.
+                // See https://github.com/dotnet/runtime/issues/84261 for more info.
                 ConsoleKey key;
                 if ((playedMoves == 0 && !playerFirst) || playedMoves == WIDTH * HEIGHT)
                     key = ConsoleKey.Spacebar;
                 else
-                    key = Console.ReadKey().Key;
+                    key = Console.ReadKey(intercept: true).Key;
 
                 switch (key)
                 {
@@ -120,14 +120,14 @@ namespace Connect4Game
                             {
                                 // Player wins!
                                 Console.WriteLine("You won!");
-                                //return;
+                                return;
                             }
                         }
 
                         // If there are no more available slots, it's a draw.
                         if (playedMoves == WIDTH * HEIGHT)
                         {
-                            Console.WriteLine("You drew!");
+                            Console.WriteLine("\nYou drew!");
                             return;
                         }
 
@@ -146,23 +146,29 @@ namespace Connect4Game
                             if (CheckForLines(aiX, aiY))
                             {
                                 // Player loses!
-                                Console.WriteLine("You lost!");
-                                //return;
+                                Console.WriteLine("\nYou lost!");
+                                return;
                             }
                         }
                         break;
                     case ConsoleKey.LeftArrow:
+                        // Move the counter cursor to the left by one.
                         if (selectedX != 1) selectedX--;
                         break;
                     case ConsoleKey.RightArrow:
+                        // Move the counter cursor to the right by one.
                         if (selectedX != WIDTH) selectedX++;
                         break;
+                    case ConsoleKey.Escape:
+                        // Back out of the game.
+                        return;
                     default:
                         break;
                 }
             }
         }
 
+        // Reset the grid.
         static void ClearGrid()
         {
             for (int y = 0; y < HEIGHT + 2; y++)
@@ -175,10 +181,17 @@ namespace Connect4Game
             }
         }
 
+        // Print out the current state of the grid.
+        // We also print the controls here too, because it's easier to deal with our cursor movements that way.
         static void PrintGrid()
         {
-            Console.Clear();
+            // Make the cursor invisible so it doesn't flash.
+            Console.CursorVisible = false;
 
+            // Move it to the top.
+            Console.SetCursorPosition(0, 0);
+
+            // Iterate through the grid and print it's contents out.
             for (int y = 1; y < HEIGHT + 2; y++)
             {
                 if (y == HEIGHT + 1) break;
@@ -196,7 +209,20 @@ namespace Connect4Game
                 }
             }
 
-            Console.Write("\n");
+            // Print controls
+            Console.Write("\n\n");
+            Console.WriteLine("SPACE : Play Counter");
+            if (Config.DEBUG) Console.WriteLine("B     : Play Opponent Counter (DEBUG)");
+            Console.WriteLine("LEFT  : Move Counter Left");
+            Console.WriteLine("RIGHT : Move Counter Right");
+            Console.WriteLine("ESC   : Quit Game");
+
+            // Remove previous characters and put the cursor back to the start of the line.
+            Console.Write(" ");
+            Console.CursorLeft = 0;
+
+            // Make the cursor visible again.
+            Console.CursorVisible = true;
         }
 
         static void TestGrid()
@@ -229,10 +255,7 @@ namespace Connect4Game
             int y = HEIGHT + 1;
 
             while (y != 0)
-            {
-                --y;
-                if (grid[x, y] == SlotState.EMPTY) break;
-            }
+                if (grid[x, --y] == SlotState.EMPTY) break;
 
             return y;
         }
@@ -254,6 +277,9 @@ namespace Connect4Game
             }
         }
 
+        // Call FindAdjacentCounters on a given grid coordinate for all possible directions.
+        // If it sets `counted` greater than or equal to WIN_LINE_LENGTH, returns true.
+        // Otherwise, returns false.
         static bool CheckForLines(int x, int y)
         {
             Team team = grid[x, y] == SlotState.RED ? Team.RED : Team.YELLOW;
@@ -273,6 +299,8 @@ namespace Connect4Game
             return false;
         }
 
+        // Recursively checks for consecutive counters of the same team that are connected to a given grid coordinate.
+        // `counted` is set to the length of the longest line found.
         public static void FindAdjacentCounters(Direction dir, Team team, int checkDirIndex, ref int counted, int x, int y)
         {
             if (grid[x, y] == SlotState.BLOCK) return;
@@ -281,11 +309,15 @@ namespace Connect4Game
 
             int nextX, nextY;
 
+            // If this is the initial call (i.e. checkDirIndex == -1), check both forwards and backwards for this counter.
+            // Otherwise, check either forwards or backwards only.
             for (int curDirIndex = (checkDirIndex == -1 ? 0 : checkDirIndex); curDirIndex < 2; curDirIndex++)
             {
                 nextX = dirs[curDirIndex][0];
                 nextY = dirs[curDirIndex][1];
 
+                // If we've found a counter of the same team, increase counted and run ourselves against that grid slot.
+                // Use curDirIndex instead of checkDirIndex, so that we stick to a straight line.
                 if (grid[nextX, nextY] == (team == Team.RED ? SlotState.RED : SlotState.YELLOW))
                 {
                     if (Config.DEBUG) Console.WriteLine($"Found adjacent counter at [{nextX}, {nextY}].");
@@ -294,6 +326,7 @@ namespace Connect4Game
                     FindAdjacentCounters(dir, team, curDirIndex, ref counted, nextX, nextY);
                 }
 
+                // If we're not checking both forwards and backwards, bail out now.
                 if (checkDirIndex != -1) return;
             }
         }

@@ -39,6 +39,7 @@ namespace Connect4
         const UInt32 STD_OUTPUT_HANDLE = unchecked ((UInt32)(-11));
         const UInt32 ENABLE_PROCESSED_INPUT = 0x1;
         const UInt32 ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x4;
+        const UInt32 REQUIRED_MODES = ENABLE_PROCESSED_INPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
 
         static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
 
@@ -67,13 +68,11 @@ namespace Connect4
                 return;
             }
 
-            const UInt32 requiredMode = ENABLE_PROCESSED_INPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-
             // See if we need to set the mode or not.
-            if ((curConsoleMode & requiredMode) != requiredMode)
+            if ((curConsoleMode & REQUIRED_MODES) != REQUIRED_MODES)
             {
                 // We do need to set it, so let's do that.
-                if (!SetConsoleMode(conHandle, curConsoleMode | requiredMode))
+                if (!SetConsoleMode(conHandle, curConsoleMode | REQUIRED_MODES))
                 {
                     winError = Marshal.GetLastWin32Error();
                     Console.WriteLine("Could not set console mode! (error code: {0:X})\nPress any key to exit.", winError);
@@ -94,7 +93,9 @@ namespace Connect4
                 {
                     Console.Write("\nPlay again? (Y/N): ");
 
-                    ConsoleKey key = Console.ReadKey().Key;
+                    // We have to use "intercept: true" because Windows acts weirdly if you press the escape key.
+                    // See https://github.com/dotnet/runtime/issues/84261 for more info.
+                    ConsoleKey key = Console.ReadKey(intercept: true).Key;
 
                     if (key == ConsoleKey.N) return;
                     if (key == ConsoleKey.Y) break;
