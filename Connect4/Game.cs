@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 
 using Connect4Config;
 using Connect4AI;
@@ -58,7 +59,7 @@ namespace Connect4Game
         static bool playerFirst = true;
 
         // Has the first move been played?
-        static bool playedFirstMove = false;
+        static int playedMoves = 0;
 
         public static void Play()
         {
@@ -69,12 +70,12 @@ namespace Connect4Game
 
             // Alternate first player.
             playerFirst = !playerFirst;
-            playedFirstMove = false;
+            playedMoves = 0;
 
             while (true)
             {
                 // If the AI needs to make a move, don't print the grid here to lessen flashing.
-                if (playedFirstMove || playerFirst) PrintGrid();
+                if (playedMoves != 0 || playerFirst) PrintGrid();
 
                 Console.Write('\n');
                 Console.WriteLine("SPACE : Play Counter");
@@ -84,8 +85,10 @@ namespace Connect4Game
 
                 // If we're not going first, and the first move hasn't been played yet, just pretend we gave input
                 // so the AI can move.
+                // If we've filled up the grid, we also do this, but instead it's so that we can tell the user they've
+                // drawn.
                 ConsoleKey key;
-                if (!playedFirstMove && !playerFirst)
+                if ((playedMoves == 0 && !playerFirst) || playedMoves == WIDTH * HEIGHT)
                     key = ConsoleKey.Spacebar;
                 else
                     key = Console.ReadKey().Key;
@@ -99,7 +102,7 @@ namespace Connect4Game
 
                         int nextY = GetNextYForX(selectedX);
 
-                        if (playedFirstMove || playerFirst)
+                        if ((playedMoves != 0 || playerFirst) && (playedMoves != WIDTH * HEIGHT))
                         {
                             if (nextY == 0) break;
 
@@ -110,12 +113,22 @@ namespace Connect4Game
 
                             PrintGrid();
 
+                            playedMoves++;
+
                             // Check to see if placing this counter created any winning lines.
                             if (CheckForLines(selectedX, nextY))
                             {
+                                // Player wins!
                                 Console.WriteLine("You won!");
-                                return;
+                                //return;
                             }
+                        }
+
+                        // If there are no more available slots, it's a draw.
+                        if (playedMoves == WIDTH * HEIGHT)
+                        {
+                            Console.WriteLine("You drew!");
+                            return;
                         }
 
                         // Let the AI make a move.
@@ -128,14 +141,15 @@ namespace Connect4Game
 
                             PrintGrid();
 
+                            playedMoves++;
+
                             if (CheckForLines(aiX, aiY))
                             {
+                                // Player loses!
                                 Console.WriteLine("You lost!");
-                                return;
+                                //return;
                             }
                         }
-
-                        if (!playedFirstMove) playedFirstMove = true;
                         break;
                     case ConsoleKey.LeftArrow:
                         if (selectedX != 1) selectedX--;
