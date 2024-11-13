@@ -2,6 +2,7 @@
 using System.Runtime.InteropServices;
 
 using Connect4Game;
+using Connect4Menu;
 
 namespace Connect4Config
 {
@@ -84,23 +85,40 @@ namespace Connect4
             // Ensure that we can print Unicode characters.
             Console.OutputEncoding = System.Text.Encoding.UTF8;
 
-            // We're ready; let's start the game!
-            while (true)
-            {
-                Game.Play();
+            // Setup the main menu.
+            BaseMenu mainMenu = new BaseMenu(0, 0, 0, 0, true);
 
+            mainMenu.AddItem("Play", true, (_) =>
+            {
+                // We're ready; let's start the game!
                 while (true)
                 {
-                    Console.Write("\nPlay again? (Y/N): ");
+                    Game.Play();
 
-                    // We have to use "intercept: true" because Windows acts weirdly if you press the escape key.
-                    // See https://github.com/dotnet/runtime/issues/84261 for more info.
-                    ConsoleKey key = Console.ReadKey(intercept: true).Key;
+                    while (true)
+                    {
+                        Console.Write("\nPlay again? (Y/N): ");
 
-                    if (key == ConsoleKey.N) return;
-                    if (key == ConsoleKey.Y) break;
+                        // We have to use "intercept: true" because Windows acts weirdly if you press the escape key.
+                        // See https://github.com/dotnet/runtime/issues/84261 for more info.
+                        ConsoleKey key = Console.ReadKey(intercept: true).Key;
+
+                        if (key == ConsoleKey.N)
+                        {
+                            Console.Clear();
+                            return;
+                        }
+                        if (key == ConsoleKey.Y) break;
+                    }
                 }
-            }
+            });
+            mainMenu.AddItem("Settings", true, null);
+            mainMenu.AddItem("Help", true, null);
+            mainMenu.AddItem("About", true, null);
+            mainMenu.AddItem("Exit", true, (menu) => { menu.CloseMenu(); });
+
+            // Display the main menu.
+            mainMenu.OpenMenu();
         }
     }
 }

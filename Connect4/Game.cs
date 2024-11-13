@@ -3,6 +3,7 @@ using System.Linq;
 
 using Connect4Config;
 using Connect4AI;
+using Connect4Menu;
 
 namespace Connect4Game
 {
@@ -102,6 +103,7 @@ namespace Connect4Game
 
                         int nextY = GetNextYForX(selectedX);
 
+                        // If there is at least one available slot, and it's the user's turn, let the user move.
                         if ((playedMoves != 0 || playerFirst) && (playedMoves != WIDTH * HEIGHT))
                         {
                             if (nextY == 0) break;
@@ -119,7 +121,7 @@ namespace Connect4Game
                             if (CheckForLines(selectedX, nextY))
                             {
                                 // Player wins!
-                                Console.WriteLine("You won!");
+                                Console.WriteLine("\nYou won!");
                                 return;
                             }
                         }
@@ -223,31 +225,6 @@ namespace Connect4Game
 
             // Make the cursor visible again.
             Console.CursorVisible = true;
-        }
-
-        static void TestGrid()
-        {
-            if (!Config.DEBUG) return;
-
-            PrintGrid();
-
-            grid[3, 6] = SlotState.RED;
-            grid[5, 6] = SlotState.YELLOW;
-            grid[5, 5] = SlotState.RED;
-            grid[6, 6] = SlotState.RED;
-            grid[6, 5] = SlotState.RED;
-            grid[6, 4] = SlotState.RED;
-            grid[6, 3] = SlotState.RED;
-            grid[6, 2] = SlotState.RED;
-            grid[6, 1] = SlotState.RED;
-
-            PrintGrid();
-
-            Console.WriteLine(GetNextYForX(2));
-            Console.WriteLine(GetNextYForX(3));
-            Console.WriteLine(GetNextYForX(4));
-            Console.WriteLine(GetNextYForX(5));
-            Console.WriteLine(GetNextYForX(6));
         }
 
         public static int GetNextYForX(int x)
