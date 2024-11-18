@@ -27,6 +27,7 @@ namespace Connect4Menu
         private string blankBuffer;
         private bool isOpen = false;
         private uint longestItemLength = 0;
+        private uint lastWidth, lastHeight;
 
         // Constructor function for BaseMenu; this runs whenever a menu is created with `new BaseMenu()`.
         public BaseMenu(uint x, uint y, uint w, uint h, bool fullscreen = false)
@@ -100,7 +101,8 @@ namespace Connect4Menu
                 //
                 // We have to use "intercept: true" because Windows acts weirdly if you press the escape key.
                 // See https://github.com/dotnet/runtime/issues/84261 for more info.
-                switch (Console.ReadKey(intercept: true).Key)
+                //switch (Console.ReadKey(intercept: true).Key)
+                switch (GetKeyPress())
                 {
                     case ConsoleKey.UpArrow:
                         // Select item above current item.
@@ -212,6 +214,24 @@ namespace Connect4Menu
         private void RestoreCursorPos(int[] pos)
         {
             Console.SetCursorPosition(pos[0], pos[1]);
+        }
+
+        // This is basically Console.ReadKey, except it returns a dummy key if the window size is changed.
+        // This allows us to resize the menu appropriately when waiting for user input.
+        private ConsoleKey GetKeyPress()
+        {
+            while (true)
+            {
+                if (lastWidth != Console.WindowWidth || lastHeight != Console.WindowHeight)
+                {
+                    lastWidth = (uint)Console.WindowWidth;
+                    lastHeight = (uint)Console.WindowHeight;
+                    return ConsoleKey.NoName;
+                }
+
+                if (Console.KeyAvailable)
+                    return Console.ReadKey(intercept: true).Key;
+            }
         }
     }
 }
