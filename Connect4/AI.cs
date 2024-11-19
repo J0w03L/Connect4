@@ -29,7 +29,7 @@ namespace Connect4AI
         static void FindSimpleMove(Game.Team team, int playerX, int playerY, out int x, out int y)
         {
             int[] bestMove = new int[3] { -1, -1, -1 };
-            int centerX = (int)Math.Ceiling((double)(Game.WIDTH / 2)) + 1;
+            int centerX = (int)Math.Ceiling((double)(Config.width / 2)) + 1;
 
             for (int ixPair = 0; ixPair < centerX; ixPair++)
             {
@@ -60,7 +60,7 @@ namespace Connect4AI
             }
 
             // If playing our best move won't win, check if we should block the player instead.
-            if (bestMove[2] < Game.WIN_LINE_LENGTH)
+            if (bestMove[2] < Config.winLineLength)
             {
                 // Check to see if the player is about to win.
                 Game.Team playerTeam = team == Game.Team.RED ? Game.Team.YELLOW : Game.Team.RED;
@@ -84,7 +84,7 @@ namespace Connect4AI
 
                         Game.FindAdjacentCounters((Game.Direction)d, playerTeam, -1, ref playerCounted, nextPlayerX, nextPlayerY);
 
-                        if (playerCounted >= Game.WIN_LINE_LENGTH)
+                        if (playerCounted >= Config.winLineLength)
                         {
                             // Player is guaranteed to win if we don't move here.
                             x = nextPlayerX;

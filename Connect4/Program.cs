@@ -1,16 +1,9 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
+using Connect4Config;
 using Connect4Game;
 using Connect4Menu;
-
-namespace Connect4Config
-{
-    class Config
-    {
-        public const bool DEBUG = !true;
-    }
-}
 
 namespace Connect4
 {

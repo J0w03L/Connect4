@@ -4,6 +4,7 @@ using System.Linq;
 using Connect4Config;
 using Connect4AI;
 using Connect4Menu;
+using System.Activities.Statements;
 
 namespace Connect4Game
 {
@@ -17,12 +18,6 @@ namespace Connect4Game
             BLOCK       // Unplayable slot; prevents FindAdjacentCounters from indexing out-of-bounds.
         }
 
-        public enum Team : int
-        {
-            RED = 0,
-            YELLOW
-        }
-
         public enum Direction : int
         {
             VERTICAL = 0,   // Upper/Lower
@@ -32,10 +27,11 @@ namespace Connect4Game
             END             // Indicates the end of directions
         }
 
-        // Grid size.
-        public const int WIDTH = 7, HEIGHT = 6;
-        // How long a line must be to win.
-        public const int WIN_LINE_LENGTH = 4;
+        public enum Team : int
+        {
+            RED = 0,
+            YELLOW
+        }
 
         // ANSI Formatting Codes.
         const string FG_RED = "\x1b[0;4;31m", FG_YELLOW = "\x1b[0;33m", FG_WHITE = "\x1b[0;37m";
@@ -48,7 +44,7 @@ namespace Connect4Game
         // + 2 on each because we're padding the edges of the grid with BLOCK slots.
         // It's easier to check for adjacent counters that way; we don't have to worry
         // about indexing out-of-bounds.
-        public static SlotState[,] grid = new SlotState[WIDTH + 2, HEIGHT + 2];
+        public static SlotState[,] grid;
 
         // What X position has the user currently got selected?
         static int selectedX = 1;
@@ -67,11 +63,11 @@ namespace Connect4Game
             // Clear console at the start of a new game.
             Console.Clear();
 
-            // Reset the grid.
-            ClearGrid();
+            // Create a new grid for this game.
+            CreateNewGrid();
 
             // Move selection to center slot.
-            selectedX = (int)Math.Ceiling((double)(Game.WIDTH / 2)) + 1;
+            selectedX = (int)Math.Ceiling((double)(Config.width / 2)) + 1;
 
             // Alternate first player.
             playerFirst = !playerFirst;
@@ -89,7 +85,8 @@ namespace Connect4Game
                 // We have to use "intercept: true" because Windows acts weirdly if you press the escape key.
                 // See https://github.com/dotnet/runtime/issues/84261 for more info.
                 ConsoleKey key;
-                if ((playedMoves == 0 && !playerFirst) || playedMoves == WIDTH * HEIGHT)
+
+                if ((playedMoves == 0 && !playerFirst) || playedMoves == Config.width * Config.width)
                     key = ConsoleKey.Spacebar;
                 else
                     key = Console.ReadKey(intercept: true).Key;
@@ -104,7 +101,7 @@ namespace Connect4Game
                         int nextY = GetNextYForX(selectedX);
 
                         // If there is at least one available slot, and it's the user's turn, let the user move.
-                        if ((playedMoves != 0 || playerFirst) && (playedMoves != WIDTH * HEIGHT))
+                        if ((playedMoves != 0 || playerFirst) && (playedMoves != Config.width * Config.height))
                         {
                             if (nextY == 0) break;
 
@@ -127,7 +124,7 @@ namespace Connect4Game
                         }
 
                         // If there are no more available slots, it's a draw.
-                        if (playedMoves == WIDTH * HEIGHT)
+                        if (playedMoves == Config.width * Config.height)
                         {
                             Console.WriteLine("\nYou drew!");
                             return;
@@ -159,7 +156,7 @@ namespace Connect4Game
                         break;
                     case ConsoleKey.RightArrow:
                         // Move the counter cursor to the right by one.
-                        if (selectedX != WIDTH) selectedX++;
+                        if (selectedX != Config.width) selectedX++;
                         break;
                     case ConsoleKey.Escape:
                         // Back out of the game.
@@ -170,15 +167,22 @@ namespace Connect4Game
             }
         }
 
+        // Allocate memory for the grid based on current width/height settings.
+        public static void CreateNewGrid()
+        {
+            grid = new SlotState[Config.width + 2, Config.height + 2];
+            ClearGrid();
+        }
+
         // Reset the grid.
         static void ClearGrid()
         {
-            for (int y = 0; y < HEIGHT + 2; y++)
+            for (int y = 0; y < Config.height + 2; y++)
             {
-                for (int x = 0; x < WIDTH + 2; x++)
+                for (int x = 0; x < Config.width + 2; x++)
                 {
-                    grid[x, y] = (x == 0 || x == WIDTH + 1 || y == 0 || y == HEIGHT + 1) ? SlotState.BLOCK : SlotState.EMPTY;
-                    if (Config.DEBUG) Console.Write($"{grid[x, y]}{(x == WIDTH + 1 ? '\n' : ' ')}");
+                    grid[x, y] = (x == 0 || x == Config.width + 1 || y == 0 || y == Config.height + 1) ? SlotState.BLOCK : SlotState.EMPTY;
+                    if (Config.DEBUG) Console.Write($"{grid[x, y]}{(x == Config.width + 1 ? '\n' : ' ')}");
                 }
             }
         }
@@ -194,20 +198,33 @@ namespace Connect4Game
             Console.SetCursorPosition(0, 0);
 
             // Iterate through the grid and print it's contents out.
-            for (int y = 1; y < HEIGHT + 2; y++)
+            // Unlike most of the code in this file, here y starts at 0.
+            // This is so that we can easily print the "cursor" on a full column.
+            for (int y = 0; y < Config.height + 2; y++)
             {
-                if (y == HEIGHT + 1) break;
+                if (y == Config.height + 1) break;
 
-                Console.Write("\n|");
+                Console.Write(y != 0 ? "\n|" : " ");
 
-                for (int x = 1; x < WIDTH + 1; x++)
+                for (int x = 1; x < Config.width + 1; x++)
                 {
-                    bool isNext = (x == selectedX && y == GetNextYForX(x));
+                    int nextY = GetNextYForX(x);
+                    bool isNext = (x == selectedX && y == nextY);
 
                     if (isNext)
-                        Console.Write($"{US_WHITE}{(playerTeam == Team.RED ? FG_RED : FG_YELLOW)}\u25CB{US_WHITE}{FG_WHITE}|");
-                    else
-                        Console.Write($"{US_WHITE}{SLOT_CHARS[(int)grid[x, y]]}{FG_WHITE}|");
+                    {
+                        Console.Write($"{US_WHITE}{(playerTeam == Team.RED ? FG_RED : FG_YELLOW)}\u25CB{US_WHITE}{FG_WHITE}");
+                        Console.Write(nextY != 0 ? "|" : " ");
+                        continue;
+                    }
+
+                    if (y == 0)
+                    {
+                        Console.Write("  ");
+                        continue;
+                    }
+
+                    Console.Write($"{US_WHITE}{SLOT_CHARS[(int)grid[x, y]]}{FG_WHITE}|");
                 }
             }
 
@@ -227,16 +244,6 @@ namespace Connect4Game
             Console.CursorVisible = true;
         }
 
-        public static int GetNextYForX(int x)
-        {
-            int y = HEIGHT + 1;
-
-            while (y != 0)
-                if (grid[x, --y] == SlotState.EMPTY) break;
-
-            return y;
-        }
-
         public static int[][] GetDirectionVectors(Direction dir, int x, int y)
         {
             switch (dir)
@@ -254,10 +261,20 @@ namespace Connect4Game
             }
         }
 
+        public static int GetNextYForX(int x)
+        {
+            int y = Config.height + 1;
+
+            while (y != 0)
+                if (grid[x, --y] == SlotState.EMPTY) break;
+
+            return y;
+        }
+
         // Call FindAdjacentCounters on a given grid coordinate for all possible directions.
         // If it sets `counted` greater than or equal to WIN_LINE_LENGTH, returns true.
         // Otherwise, returns false.
-        static bool CheckForLines(int x, int y)
+        public static bool CheckForLines(int x, int y)
         {
             Team team = grid[x, y] == SlotState.RED ? Team.RED : Team.YELLOW;
 
@@ -268,7 +285,7 @@ namespace Connect4Game
                 int counted = 1;
                 FindAdjacentCounters((Direction)d, team, -1, ref counted, x, y);
 
-                if (counted >= WIN_LINE_LENGTH) return true;
+                if (counted >= Config.winLineLength) return true;
             }
 
             if (Config.DEBUG) Console.ReadKey();
