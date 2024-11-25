@@ -1,9 +1,11 @@
-﻿using Connect4Menu;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+
+using Connect4Menu;
 
 namespace Connect4Config
 {
@@ -15,7 +17,7 @@ namespace Connect4Config
         /* ---------------- CONSTANTS ---------------- */
 
         // Is debugging mode enabled?
-        public const bool DEBUG = !true;
+        public const bool DEBUG = true;
 
         // Grid size limits and defaults.
         public const int MIN_WIDTH = 7, MIN_HEIGHT = 6,
@@ -26,6 +28,9 @@ namespace Connect4Config
         public const int MIN_WIN_LINE_LENGTH = 4, MAX_WIN_LINE_LENGTH = 10;
         public const int DEF_WIN_LINE_LENGTH = 4;
 
+        // Default setting for useOpponentAI.
+        public const bool DEF_USE_OPPONENT_AI = false;
+
         /* ---------------- SETTINGS ---------------- */
 
         // Current grid size.
@@ -34,7 +39,51 @@ namespace Connect4Config
         // How long a line must currently be to win.
         public static int winLineLength = DEF_WIN_LINE_LENGTH;
 
+        // Is the second player AI?
+        public static bool useOpponentAI = DEF_USE_OPPONENT_AI;
+
+        /* ----------------  MENUS  ---------------- */
+
+        public static BaseMenu configMenu;
+
         /* ---------------- METHODS ---------------- */
+
+        // Setup configMenu.
+        public static void SetupConfigMenu()
+        {
+            configMenu = new BaseMenu("Settings", 0, 0, 0, 0, true);
+
+            configMenu.AddSliderItem(
+                "Grid Size: {0} x {1}",
+                true,
+                (item, increased) => { ClampAndWrap(increased, ref width, MIN_WIDTH, MAX_WIDTH);
+                                       ClampAndWrap(increased, ref height, MIN_HEIGHT, MAX_HEIGHT);
+                                       if (winLineLength > width) winLineLength = (width <= MAX_WIN_LINE_LENGTH) ? width : (width < MIN_WIN_LINE_LENGTH) ? width : MIN_WIN_LINE_LENGTH; },
+                (item) => { return string.Format(item.text, width, height); }
+            );
+            configMenu.AddSliderItem(
+                "Winning Line Length: {0}",
+                true,
+                (item, increased) => { ClampAndWrap(increased, ref winLineLength, MIN_WIN_LINE_LENGTH, width > MAX_WIN_LINE_LENGTH ? MAX_WIN_LINE_LENGTH : width); },
+                (item) => { return string.Format(item.text, winLineLength); }
+            );
+            configMenu.AddSliderItem(
+                "AI Opponent?: {0}",
+                true,
+                (item, increased) => { useOpponentAI = !useOpponentAI; },
+                (item) => { return string.Format(item.text, useOpponentAI ? "Yes" : "No"); }
+            );
+            configMenu.AddButtonItem(
+                "Revert to Defaults",
+                true,
+                (_) => { width = DEF_WIDTH; height = DEF_HEIGHT; winLineLength = DEF_WIN_LINE_LENGTH; useOpponentAI = DEF_USE_OPPONENT_AI; }
+            );
+            configMenu.AddButtonItem(
+                "Back",
+                true,
+                (menu) => { menu.CloseMenu(); }
+            );
+        }
 
         // Ensure all current config values are sane.
         public static void SanitizeAll()
@@ -84,6 +133,15 @@ namespace Connect4Config
         public static void LatchFalseBool(ref bool var, bool val)
         {
             if (var) var = val;
+        }
+
+        // Common function for slider menu items.
+        public static void ClampAndWrap(bool increased, ref int var, int min, int max)
+        {
+            if (increased)
+                var = var < max ? var + 1 : min;
+            else
+                var = var > min ? var - 1 : max;
         }
     }
 }

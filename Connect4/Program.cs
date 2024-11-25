@@ -78,10 +78,13 @@ namespace Connect4
             // Ensure that we can print Unicode characters.
             Console.OutputEncoding = System.Text.Encoding.UTF8;
 
-            // Setup the main menu.
-            BaseMenu mainMenu = new BaseMenu(0, 0, 0, 0, true);
+            // Setup the config menu.
+            Config.SetupConfigMenu();
 
-            mainMenu.AddItem("Play", true, (_) =>
+            // Setup the main menu.
+            BaseMenu mainMenu = new BaseMenu("C# Connect 4", 0, 0, 0, 0, true);
+
+            mainMenu.AddButtonItem("Play", true, (_) =>
             {
                 // We're ready; let's start the game!
                 while (true)
@@ -105,10 +108,10 @@ namespace Connect4
                     }
                 }
             });
-            mainMenu.AddItem("Settings", true, null);
-            mainMenu.AddItem("Help", true, null);
-            mainMenu.AddItem("About", true, null);
-            mainMenu.AddItem("Exit", true, (menu) => { menu.CloseMenu(); });
+            mainMenu.AddButtonItem("Settings", true, (_) => { Config.configMenu.OpenMenu();  });
+            //mainMenu.AddButtonItem("Help", true, null);
+            mainMenu.AddButtonItem("About", true, null);
+            mainMenu.AddButtonItem("Quit", true, (menu) => { menu.CloseMenu(); });
 
             // Display the main menu.
             mainMenu.OpenMenu();
