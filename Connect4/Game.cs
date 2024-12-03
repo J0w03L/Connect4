@@ -35,6 +35,7 @@ namespace Connect4Game
         }
 
         // ANSI Formatting Codes.
+        // See https://gist.github.com/JBlond/2fea43a3049b38287e5e9cefc87b2124.
         const string FG_RED = "\x1b[0;4;31m", FG_YELLOW = "\x1b[0;4;33m", FG_WHITE = "\x1b[0;37m";
         const string BG_WHITE = "\x1b[47m", BG_BLACK = "\x1b[40m";
         const string US_WHITE = "\x1b[4;37m", US_BLACK = "\x1b[4;30m";
