@@ -17,7 +17,7 @@ namespace Connect4Config
         /* ---------------- CONSTANTS ---------------- */
 
         // Is debugging mode enabled?
-        public const bool DEBUG = true;
+        public const bool DEBUG = false;
 
         // Grid size limits and defaults.
         public const int MIN_WIDTH = 7, MIN_HEIGHT = 6,
